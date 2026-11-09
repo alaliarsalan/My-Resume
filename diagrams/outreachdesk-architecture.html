@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>OutreachDesk — Production SaaS Architecture</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2230; --line:#30363d;
+    --txt:#e6edf3; --dim:#9da7b3; --accent:#58a6ff; --green:#3fb950;
+    --purple:#bc8cff; --orange:#f0883e; --red:#f85149; --cyan:#39d0d8; --yellow:#e3b341;
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    padding:34px 40px 40px;line-height:1.45}
+  h1{font-size:27px;margin:0 0 4px;letter-spacing:.3px}
+  .sub{color:var(--dim);font-size:13.5px;margin-bottom:22px}
+  h2{font-size:18px;margin:30px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:10px}
+  h2 .tag{font-size:11px;background:var(--accent);color:#04101f;padding:2px 8px;border-radius:20px;font-weight:700}
+  .stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:0 0 6px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .stat .v{font-size:19px;font-weight:800;color:var(--accent);letter-spacing:.2px}
+  .stat .k{font-size:10.8px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px;margin-top:2px}
+  /* ---- TOPOLOGY ---- */
+  .topo{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+  .box{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:11px 13px;position:relative;font-size:12.5px}
+  .box .id{position:absolute;top:-9px;left:10px;font-size:10px;font-weight:800;
+    background:var(--accent);color:#04101f;border-radius:6px;padding:1px 7px}
+  .box .nm{font-weight:700;font-size:13px;margin-bottom:3px}
+  .box .ds{color:var(--dim);font-size:11.5px}
+  .box .lo{color:var(--cyan);font-size:10.8px;margin-top:5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .a3{grid-column:span 3}.a4{grid-column:span 4}.a6{grid-column:span 6}
+  .bord-accent{border-top:3px solid var(--accent)}
+  .bord-pur{border-top:3px solid var(--purple)}
+  .bord-gr{border-top:3px solid var(--green)}
+  .bord-or{border-top:3px solid var(--orange)}
+  .bord-cy{border-top:3px solid var(--cyan)}
+  .bord-rd{border-top:3px solid var(--red)}
+  .bord-ye{border-top:3px solid var(--yellow)}
+  .flow-note{color:var(--dim);font-size:11.5px;margin:10px 0 0;padding:8px 12px;
+    border-left:3px solid var(--purple);background:var(--panel2);border-radius:0 8px 8px 0}
+  /* ---- WORKFLOW ---- */
+  .pipe{display:flex;flex-direction:column;gap:0}
+  .stage{display:grid;grid-template-columns:54px 1fr;gap:0;position:relative}
+  .num{display:flex;align-items:center;justify-content:center;flex-direction:column;
+    font-size:22px;font-weight:800;color:#04101f}
+  .num .badge{border-radius:50%;width:46px;height:46px;display:flex;align-items:center;justify-content:center;
+    background:var(--accent)}
+  .num .arrow{color:var(--line);font-size:26px;line-height:.6;margin-top:6px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    margin:0 0 12px 0;padding:12px 15px}
+  .card .hd{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
+  .card .ttl{font-size:15px;font-weight:700}
+  .card .who{font-size:11.5px;color:#04101f;background:var(--yellow);padding:2px 9px;border-radius:20px;font-weight:700}
+  .card .section{margin-top:8px;font-size:12.5px}
+  .card .section b{color:var(--accent)}
+  .tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .chip{font-size:11px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;
+    padding:2px 8px;color:var(--txt);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .chip.io{background:#10251c;border-color:#1d4b32;color:var(--green)}
+  .chip.gate{background:#2a1410;border-color:#5c241c;color:var(--red)}
+  .gatebar{margin-top:8px;background:#1a1109;border:1px solid #5c3a1c;border-radius:8px;
+    padding:6px 10px;font-size:11.5px;color:var(--orange)}
+  .gatebar b{color:var(--orange)}
+  .ref{font-size:10.5px;color:var(--dim);font-family:ui-monospace,monospace}
+  /* ---- LEGEND ---- */
+  .legend{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+  .lg{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:11.5px}
+  .lg b{color:var(--accent)}
+  .foot{margin-top:26px;color:var(--dim);font-size:11px;border-top:1px solid var(--line);padding-top:12px}
+  code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:11.5px}
+</style>
+</head>
+<body>
+
+<h1>OutreachDesk — Production SaaS Architecture</h1>
+<div class="sub">Multi-tenant outbound sequencing platform, designed, built and operated by one engineer on a single VPS. Everything below is deployed and running; the same asset is also the target of the agentic pentest pipeline in this repository.</div>
+
+<div class="stats">
+  <div class="stat"><div class="v">~83k</div><div class="k">lines of code</div></div>
+  <div class="stat"><div class="v">227</div><div class="k">source files</div></div>
+  <div class="stat"><div class="v">480</div><div class="k">commits</div></div>
+  <div class="stat"><div class="v">48</div><div class="k">db tables</div></div>
+  <div class="stat"><div class="v">24</div><div class="k">scheduled jobs</div></div>
+  <div class="stat"><div class="v">1</div><div class="k">vps, 1 engineer</div></div>
+</div>
+
+<!-- ================= TOPOLOGY ================= -->
+<h2><span class="tag">LAYER 1</span> Runtime Topology</h2>
+<div class="topo">
+
+  <div class="box a3 bord-cy"><span class="id" style="background:var(--cyan)">A</span>
+    <div class="nm">Cloudflare edge</div>
+    <div class="ds">TLS, WAF, bot management, Turnstile on every login and signup.</div>
+    <div class="lo">outreachdesk.cloud</div>
+  </div>
+
+  <div class="box a3 bord-accent"><span class="id">B</span>
+    <div class="nm">Static SPA</div>
+    <div class="ds">React 19 + TypeScript, 44 routes, per-route pre-rendered HTML for SEO. No server-side container.</div>
+    <div class="lo">Cloudflare Pages</div>
+  </div>
+
+  <div class="box a3 bord-cy"><span class="id" style="background:var(--cyan)">C</span>
+    <div class="nm">Cloudflare Tunnel</div>
+    <div class="ds">Outbound-only ingress. No inbound ports are exposed on the VPS.</div>
+    <div class="lo">*.outreachdesk.cloud → proxy</div>
+  </div>
+
+  <div class="box a3 bord-accent"><span class="id">D</span>
+    <div class="nm">Reverse proxy</div>
+    <div class="ds">Host-based routing and TLS termination for API and identity traffic.</div>
+    <div class="lo">api. · auth.</div>
+  </div>
+
+  <div class="box a6 bord-accent"><span class="id">E</span>
+    <div class="nm">API service — FastAPI (Python 3.12)</div>
+    <div class="ds">~50 routers: sequences, prospects, inbox, analytics, deliverability, webhooks, support, admin. Global JWT middleware, role-based access, per-route rate limits, pure-ASGI security headers. Multi-tenant row isolation on every query.</div>
+    <div class="lo">uvicorn · SQLAlchemy · Pydantic</div>
+  </div>
+
+  <div class="box a3 bord-pur"><span class="id" style="background:var(--purple)">F</span>
+    <div class="nm">Scheduler — 24 jobs</div>
+    <div class="ds">In-process APScheduler: send queue, reply poll, tracking flush, bounce checks, backups, enrichment. Serialised by a database leader lock.</div>
+    <div class="lo">no broker, no Redis required</div>
+  </div>
+
+  <div class="box a3 bord-gr"><span class="id" style="background:var(--green)">G</span>
+    <div class="nm">Keycloak 26.1</div>
+    <div class="ds">Identity provider. Realm group membership maps to product entitlements on every login. Local 2FA (TOTP / email) and device trust on top.</div>
+    <div class="lo">OIDC · group → tier sync</div>
+  </div>
+
+  <div class="box a4 bord-gr"><span class="id" style="background:var(--green)">H</span>
+    <div class="nm">PostgreSQL — 48 tables</div>
+    <div class="ds">Prospects, sequences, email logs, outbox events, AI audit (hash only), append-only consent audit, suppression list, webhook delivery log.</div>
+    <div class="lo">Alembic migrations</div>
+  </div>
+
+  <div class="box a4 bord-or"><span class="id" style="background:var(--orange)">I</span>
+    <div class="nm">ClamAV sidecar</div>
+    <div class="ds">Every CSV / XLSX upload scanned before ingest. Infected file rejected, admin alerted.</div>
+    <div class="lo">clamd · async scan</div>
+  </div>
+
+  <div class="box a4 bord-pur"><span class="id" style="background:var(--purple)">J</span>
+    <div class="nm">Model provider</div>
+    <div class="ds">Zero-retention LLM endpoint with a whitelisted host guard, or a tenant's own key. Every call fingerprinted to the audit log.</div>
+    <div class="lo">AI_PROVIDER: cloud / local / BYOK</div>
+  </div>
+
+  <div class="box a6 bord-ye"><span class="id" style="background:var(--yellow)">K</span>
+    <div class="nm">Tenant mailboxes (orchestrator model)</div>
+    <div class="ds">Sending runs through the customer's own Gmail, Microsoft 365 or SMTP account. The VPS never speaks SMTP and never appears in message headers, so its IP reputation is not in the delivery path.</div>
+    <div class="lo">Gmail API · Graph API · SMTP / IMAP</div>
+  </div>
+
+  <div class="box a6 bord-rd"><span class="id" style="background:var(--red)">L</span>
+    <div class="nm">Deliverability telemetry</div>
+    <div class="ds">Per-domain SPF / DKIM / DMARC / MX checks, pre-flight spam scoring, bounce and complaint thresholds checked every 15 minutes, daily DNSBL sweep across every active sending domain.</div>
+    <div class="lo">auto-pause on threshold breach</div>
+  </div>
+
+</div>
+<div class="flow-note"><b>Request path:</b> A → C → D → E → H. The scheduler F drives every outbound send through K and never bypasses the checks in E. Uploads enter through E and hit I before a single row is written. LLM calls leave E for J only through the host whitelist.</div>
+
+<!-- ================= SEND PATH ================= -->
+<h2><span class="tag">LAYER 2</span> Cold Send Path</h2>
+<div class="pipe">
+
+  <div class="stage">
+    <div class="num"><div class="badge">1</div><div class="arrow">▼</div></div>
+    <div class="card">
+      <div class="hd"><div class="ttl">Enrolment</div><div class="who">prospect → sequence</div></div>
+      <div class="section">A prospect joins a sequence. Timezone is resolved from the location field against a 100+ country mapper, so the sequence can send in <b>their</b> business hours, not the sender's. Consent is recorded with a type and an expiry date, not a boolean.</div>
+      <div class="tools"><span class="chip">location → IANA tz</span><span class="chip">consent type + expiry</span><span class="chip io">OUT: enrolled step 1 queued</span></div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="num"><div class="badge">2</div><div class="arrow">▼</div></div>
+    <div class="card">
+      <div class="hd"><div class="ttl">Send-time gate</div><div class="who">seven checks before any email</div></div>
+      <div class="section">Outside the prospect's window? Skip. Daily or monthly cap hit? Skip. Consent expired, prospect on the global blocklist, or already replied? Skip. The gate is evaluated per email at send time, not at campaign launch, because conditions change while a sequence runs.</div>
+      <div class="tools"><span class="chip">tz window</span><span class="chip">daily cap</span><span class="chip">consent expiry</span><span class="chip">blocklist</span><span class="chip">stop-on-reply</span><span class="chip io">OUT: eligible or deferred</span></div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="num"><div class="badge">3</div><div class="arrow">▼</div></div>
+    <div class="card">
+      <div class="hd"><div class="ttl">Personalisation and per-recipient uniqueness</div><div class="who">render step</div></div>
+      <div class="section">Merge fields resolved, optional AI icebreaker pulled from cached enrichment, and a spintax block expanded per recipient so no two bodies are byte-identical. Open tracking is <b>off by default</b>: a tracking pixel is a spam signal and Apple's mail privacy makes open data unreliable anyway.</div>
+      <div class="tools"><span class="chip">{{FirstName}}</span><span class="chip">spintax {a|b}</span><span class="chip">icebreaker (optional)</span><span class="chip io">OUT: final message body</span></div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="num"><div class="badge" style="background:var(--orange);color:#04101f">4</div><div class="arrow">▼</div></div>
+    <div class="card" style="border-color:var(--orange)">
+      <div class="hd"><div class="ttl">Outbox commit — the exactly-once guarantee</div><div class="who">before the network is touched</div></div>
+      <div class="section">An outbox row with a unique idempotency key is committed <b>before</b> the send. If the process dies between SMTP and the audit write, the retry finds the key and does nothing. This single ordering decision removed an entire class of duplicate-email incidents.</div>
+      <div class="tools"><span class="chip">INSERT outbox (unique key)</span><span class="chip">status: sent | failed</span><span class="chip io">OUT: idempotent send intent</span></div>
+      <div class="gatebar"><b>Why it matters:</b> cold email has one unforgivable failure mode, and it is receiving the same message twice from an automated system that claims to be careful.</div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="num"><div class="badge">5</div><div class="arrow">▼</div></div>
+    <div class="card">
+      <div class="hd"><div class="ttl">Send through the tenant's own mailbox</div><div class="who">orchestrator, not sender</div></div>
+      <div class="section">Delivery goes through the customer's mailbox: Gmail API, Microsoft Graph, or any SMTP provider. Randomized human pacing between sends. If the send fails, it retries three times with backoff before surfacing a failure.</div>
+      <div class="tools"><span class="chip">Gmail API</span><span class="chip">Graph API</span><span class="chip">SMTP</span><span class="chip io">OUT: delivered or retry ×3</span></div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="num"><div class="badge" style="background:var(--red);color:#fff">6</div></div>
+    <div class="card" style="border-color:var(--red)">
+      <div class="hd"><div class="ttl">Outcome and automatic guardrails</div><div class="who">the part that protects the domain</div></div>
+      <div class="section">On success the next step is scheduled. On a rolling 24-hour window, an account that crosses the bounce or complaint threshold is <b>paused automatically</b> and its daily limit halved, before the domain reputation takes the damage. Thresholds match what the mailbox providers actually enforce, not the looser defaults most tools ship with.</div>
+      <div class="tools"><span class="chip">bounce threshold</span><span class="chip">complaint threshold</span><span class="chip">auto-pause</span><span class="chip">notification</span><span class="chip io">OUT: healthy sending reputation</span></div>
+      <div class="gatebar"><b>Design stance:</b> the deliverability guardrails are not features the customer can switch off, because the failure is invisible until the inbox placement is already gone.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ================= REPLY LOOP ================= -->
+<h2><span class="tag">LAYER 3</span> Reply Loop (autonomous triage)</h2>
+<div class="pipe">
+
+  <div class="stage">
+    <div class="num"><div class="badge">1</div><div class="arrow">▼</div></div>
+    <div class="card">
+      <div class="hd"><div class="ttl">Poll</div><div class="who">every 15 minutes</div></div>
+      <div class="section">Unread mail is pulled from every connected mailbox over IMAP, Gmail API or Graph, then deduplicated against known messages.</div>
+      <div class="tools"><span class="chip">IMAP</span><span class="chip">Gmail</span><span class="chip">Graph</span></div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="num"><div class="badge">2</div><div class="arrow">▼</div></div>
+    <div class="card">
+      <div class="hd"><div class="ttl">Thread match</div><div class="who">In-Reply-To header</div></div>
+      <div class="section">A reply is matched to the exact sent message. On match, pending follow-ups are cancelled immediately, so a warm reply is never followed by "just bumping this".</div>
+      <div class="tools"><span class="chip">In-Reply-To / References</span><span class="chip io">OUT: sequence stopped</span></div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="num"><div class="badge">3</div><div class="arrow">▼</div></div>
+    <div class="card">
+      <div class="hd"><div class="ttl">Classification — deterministic first, model second</div><div class="who">8 categories, 5 objection types</div></div>
+      <div class="section">A keyword pass returns an instant, deterministic category. The model can override it when available. If the provider is slow or down, the keyword decision stands: the inbox degrades, it does not stop.</div>
+      <div class="tools"><span class="chip">keyword fast path</span><span class="chip">LLM override</span><span class="chip">objection sub-type</span><span class="chip io">OUT: routed category</span></div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="num"><div class="badge" style="background:var(--green);color:#04101f">4</div><div class="arrow">▼</div></div>
+    <div class="card" style="border-color:var(--green)">
+      <div class="hd"><div class="ttl">Autonomous routing</div><div class="who">per category, no human in the loop</div></div>
+      <div class="section">Unsubscribe cancels every sequence and writes a consent record. Hostile pauses and blocks. Out-of-office pauses for a week. Referral tags and notifies. Interested flags the inbox. Auto-replies are recognised and suppressed instead of being treated as engagement.</div>
+      <div class="tools"><span class="chip">cancel all</span><span class="chip">pause 7d</span><span class="chip">block</span><span class="chip">notify</span><span class="chip io">OUT: correct next action, automatically</span></div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="num"><div class="badge">5</div></div>
+    <div class="card">
+      <div class="hd"><div class="ttl">CRM handoff</div><div class="who">signed webhooks</div></div>
+      <div class="section">Interested replies fire a signed webhook to Slack, Discord, HubSpot or Zapier. Payloads carry an HMAC-SHA256 signature, retries use backoff, every attempt is logged, and an endpoint that keeps failing is disabled rather than hammered.</div>
+      <div class="tools"><span class="chip">HMAC-SHA256</span><span class="chip">retry + backoff</span><span class="chip">delivery log</span><span class="chip io">OUT: CRM updated</span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ================= DECISIONS ================= -->
+<h2><span class="tag">KEY</span> Decisions, Trade-offs, Scope</h2>
+<div class="legend">
+  <div class="lg"><b>Exactly-once sends.</b> Outbox row before SMTP. Cost: one extra write per email. Benefit: duplicates become structurally impossible.</div>
+  <div class="lg"><b>Keyword first, model second.</b> Autonomy that depends on a model call is autonomy that fails when the model does.</div>
+  <div class="lg"><b>No broker, no Redis.</b> In-process scheduler with a leader lock. Correct at this scale, and the first thing to replace at the next one.</div>
+  <div class="lg"><b>Consent as an audit trail.</b> Append-only, expiring, and enforced at send time. A boolean flag cannot survive an audit.</div>
+  <div class="lg"><b>Orchestrator, not sender.</b> Sending through tenant mailboxes keeps the VPS out of the delivery path and out of the reputation conversation.</div>
+  <div class="lg"><b>Verification over claims.</b> Every scheduled job has a health check, every deploy gets a live smoke test, and no change ships on an agent's word alone.</div>
+</div>
+
+<div class="foot">Scope note: this diagram documents capability and flow only. Credentials, container names, internal hostnames, admin routes and rate-limit values are deliberately excluded, because the same asset is published as a pentest target in this repository. Source is private; a read-only walkthrough is available on request.</div>
+
+</body>
+</html>

@@ -49,6 +49,10 @@ OutreachDesk is a self-hosted outbound sequencing platform I designed, built and
 
 **Scale:** ~83,000 lines of application code (41k Python, 41k TypeScript) across 227 source files, 480 commits over four and a half months, 48 database tables, 24 scheduled jobs, one VPS.
 
+![OutreachDesk architecture](diagrams/outreachdesk-architecture.png)
+
+Runtime topology, cold send path and reply loop. Capability and flow only: credentials, container names, internal hostnames and rate-limit values are deliberately excluded, because the same asset is published here as a pentest target.
+
 **What it does**
 
 - Multi-step email sequences with conditional branching, A/B variants, per-prospect send windows and prospect-local timezone delivery
