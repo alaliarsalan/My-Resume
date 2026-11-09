@@ -1,9 +1,9 @@
-# Ali Arsalan — Security Portfolio
+# Ali Arsalan — Security & Engineering Portfolio
 
 **CISSP · OSCP · CCIE-Security · AWS Solutions Architect Professional / Security Specialty**
 Cybersecurity engineer (15+ years: enterprise security architecture, cloud security, offensive testing). Current focus: **AI security — securing LLM-integrated applications and agentic systems**.
 
-This repository hosts selected, **redacted** sample work. Full versions and additional case material available on request: **a.aly@live.com**
+This repository hosts selected, **redacted** sample work: an agentic security pipeline, and the production SaaS I built and then tested with it. Full versions and additional case material available on request: **a.aly@live.com**
 
 ---
 
@@ -40,6 +40,38 @@ Both reports are redacted and published with authorization — the production as
 ![Agentic penetration-testing pipeline architecture](diagrams/pentest-framework-diagram.png)
 
 Full diagram: [pentest-framework-diagram-public.pdf](diagrams/pentest-framework-diagram-public.pdf) — physical/logical topology (control plane, execution plane, verification plane) plus the end-to-end "step 1 → step N" workflow with toolchains, evidence flow, and QA gates.
+
+---
+
+## Engineering: OutreachDesk, a production SaaS
+
+OutreachDesk is a self-hosted outbound sequencing platform I designed, built and operate on a single VPS. It is not a demo. It runs multi-tenant, sends live production email, and it is also the asset I use as the target for my own agentic pentest pipeline (reports above).
+
+**Scale:** ~83,000 lines of application code (41k Python, 41k TypeScript) across 227 source files, 480 commits over four and a half months, 48 database tables, 24 scheduled jobs, one VPS.
+
+**What it does**
+
+- Multi-step email sequences with conditional branching, A/B variants, per-prospect send windows and prospect-local timezone delivery
+- Unified inbox with keyword plus LLM reply classification (8 categories, 5 objection sub-types) and autonomous routing: unsubscribe, out of office, hostile, referral, interested
+- Deliverability control plane: DNS health (SPF, DKIM, DMARC, MX), pre-flight spam scoring, bounce and complaint auto-pause, DNSBL monitoring
+- Consent and suppression: RFC 8058 one-click unsubscribe, preference centre, append-only consent audit, and a global blocklist every tenant's sequences respect
+- Identity and access: Keycloak IAM with group-to-entitlement sync, TOTP and email 2FA, scoped API tokens, role-based access control
+
+**Engineering decisions worth discussing**
+
+- **Exactly-once sends.** An outbox row with a unique idempotency key is committed before SMTP is touched, so a crash or counter reset cannot double-send.
+- **Fast path plus LLM override.** Keyword classification still routes replies when the model is unavailable, so the inbox degrades instead of breaking.
+- **In-memory fallbacks** for rate limiting, caching and click tracking. No Redis dependency is required to run the platform.
+- **Encrypted credentials at rest** (Fernet), SHA-256 hashed API tokens, HMAC-signed webhooks, per-tenant row isolation on every query.
+- **Untrusted uploads** are scanned by a ClamAV sidecar before any prospect data reaches the database.
+
+**How it was built**
+
+Every feature went through the same loop: written spec, coding-agent implementation, test or live verification, my review, merge. Agents wrote a lot of the code. The part that mattered was the verification loop around them: a health check for every scheduled job, a live smoke test before each deploy, and a rule that nothing ships on a claim alone. Where the loop was weak, defects reached production, and those defects are documented in my own pentest report rather than quietly removed.
+
+Design notes, trade-offs and what I would rebuild today: [docs/outreachdesk-case-study.md](docs/outreachdesk-case-study.md)
+
+Source is private (live product, real tenant data). Read-only architecture walkthrough and code excerpts available on request.
 
 ---
 
